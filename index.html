@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    img {
+      display:block;
+      width:100%;
+      height:auto;
+    }
+
+    .cover {
+      width:100%;
+      height:800px;
+      background-size: cover;
+      background-position: center center;
+    }
+  </style>
+</head>
+<body>
+
+  <!--
+
+  Examples of responsive image solutions
+  ======================================
+
+  1. Using img, srcset, sizes
+
+  - doesn't work on ios safari (always gets large image)
+  - doesn't work on safari (does not pull in larger image when scaling up browser)
+  - (non-issue) does not revert back to smaller size when scalling down browser
+
+      <img srcset="/assets/atget-full-large.jpg 1280w,
+             /assets/atget-full-medium.jpg 1024w,
+             /assets/atget-full-small.jpg 768w"
+           sizes="(max-width: 768px) 768px,
+             (max-width: 1024px) 1024px,
+             1280px" />
+
+  2. Using picture & source elements with sizes attribute
+
+  - doesn't work on ios safari (always gets large image)
+  - doesn't work on safari (does not pull in larger image when scaling up browser)
+  - (non-issue) does not revert back to smaller size when scalling down browser
+
+      <picture>
+        <source
+        srcset="/assets/atget-full-large.jpg 1280w,
+          /assets/atget-full-medium.jpg 1024w,
+          /assets/atget-full-small.jpg 768w"
+        sizes="(max-width: 768px) 768px,
+          (max-width: 1024px) 1024px,
+          1280px"/>
+        <img src="/assets/atget-full-small.jpg" />
+      </picture>
+
+
+  3. Using picture & source elements with media attribute
+
+  - works on chrome, safari / ios, firefox
+  - should work (need to test) on IE w/ picturefill polyfill
+
+  -->
+
+      <picture>
+        <source srcset="/assets/atget-full-large.jpg" media="(min-width: 1024px)"/>
+        <source srcset="/assets/atget-full-medium.jpg" media="(min-width: 768px)"/>
+        <img src="/assets/atget-full-small.jpg" />
+      </picture>
+
+  <!--
+
+   Examples of responsive background images
+   ========================================
+
+   https://css-tricks.com/responsive-images-css/
+   ** keep in mind it's not possibly to inline media queries
+
+   1. Use image-set attribute:
+
+   - http://caniuse.com/#feat=css-image-set
+   - could possibly use polyfill:
+   - - - https://github.com/wtfil/image-set-polyfill
+   - - - ISSUE: there is no indication this will work with lazyload
+
+      .img {
+        background-image: url(examples/images/image-384.jpg);
+
+        background-image:
+        -webkit-image-set(
+          /assets/atget-full-large.jpg 1280w,
+          /assets/atget-full-medium.jpg 1024w,
+          /assets/atget-full-small.jpg 768w,
+        );
+
+        background-image:
+          image-set(
+            /assets/atget-full-large.jpg 1280w,
+            /assets/atget-full-medium.jpg 1024w,
+            /assets/atget-full-small.jpg 768w,
+          );
+      }
+
+  2. Use javascript source selector
+
+  - derivative sources are served as possible options to be used
+  - script chooses best source based size of element
+  - script updates on browser resize if a larger image is necessary
+
+  -->
+
+  <div class="cover"
+       data-src-sm="/assets/atget-full-small.jpg"
+       data-src-md="/assets/atget-full-medium.jpg"
+       data-src-lg="/assets/atget-full-large.jpg">
+  </div>
+
+  <script>
+
+    (function() {
+
+      /**
+       * Get Background Source
+       *
+       * - determines which source to use for the background image
+       */
+      var getBgSource = function(element) {
+
+        var sources = [];
+
+        if (element.getAttribute('data-src-xxs')) sources.push({url: element.getAttribute('data-src-xxs'), breakpoint: 320});
+        if (element.getAttribute('data-src-xs')) sources.push({url: element.getAttribute('data-src-xs'), breakpoint: 480});
+        if (element.getAttribute('data-src-sm')) sources.push({url: element.getAttribute('data-src-sm'), breakpoint: 768});
+        if (element.getAttribute('data-src-md')) sources.push({url: element.getAttribute('data-src-md'), breakpoint: 992});
+        if (element.getAttribute('data-src-lg')) sources.push({url: element.getAttribute('data-src-lg'), breakpoint: 1200});
+
+        if (sources.length === 0) throw new Error('No sources found on cover element:', element);
+
+        // find the smallest source that will cover the elements width
+        for(var i = 0; i < sources.length; i++) {
+          if (sources[i].breakpoint >= element.clientWidth) {
+            return sources[i].url
+          }
+          // if there is not a source large enough
+          else if (i + 1 === sources.length) {
+            return sources[i].url
+          }
+        }
+      };
+
+      /**
+       * Process Cover Backgrounds
+       *
+       * - need to test this with lazyload to be sure there is not a race condition
+       * - - - does this script (which adds the data-original attribute) need to run before lazyload?
+       * - - - does lazyload need to update if data-original updates (on browser resize)?
+       */
+
+      var processCoverBackgrounds = function() {
+        // get all of the cover images that need to be processed
+        var images = document.getElementsByClassName('cover');
+
+        // process all cover images
+        for (var i = 0; i < images.length; i++) {
+          var src = getBgSource(images[i]);
+          images[i].style.backgroundImage = 'url(' + src + ')';
+        }
+      };
+
+      // process cover images on page load
+      processCoverBackgrounds();
+
+      // update cover images on browser resize
+      window.addEventListener('resize', function() {
+        // @TODO: this should be throttled
+        processCoverBackgrounds();
+      });
+
+
+    })()
+
+  </script>
+
+</body>
+</html>
+
